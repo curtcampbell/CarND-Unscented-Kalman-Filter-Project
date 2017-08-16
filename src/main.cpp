@@ -93,7 +93,7 @@ int main()
     	  ground_truth.push_back(gt_values);
           
         //Call ProcessMeasurment(meas_package) for Kalman filter
-    	  //ukf.ProcessMeasurement(meas_package.get()); 
+    	  ukf.ProcessMeasurement(meas_package.get()); 
 
     	  //Push the current estimated x,y positon from the Kalman filter's state vector
 

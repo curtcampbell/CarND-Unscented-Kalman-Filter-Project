@@ -26,6 +26,9 @@ using TAugCovarianceMatrix = Eigen::Matrix<double, aug_state_dimension, aug_stat
 using TAugSigmapointMatrix = Eigen::Matrix<double, aug_state_dimension, sigma_point_dimension>;
 
 
+///
+// Interface used for all sensor update classes.
+//
 struct UKF_update
 {
   virtual void InitialUpdate(TrackedObject* tracked_object, const MeasurementPackage& meas_mackage) = 0;
@@ -56,23 +59,8 @@ public:
 
   UnscentedKalmanUpdateBase(const TNoiseCovarianceMatrix& process_noise_covariance, double lambda);
 
-  ///**
-  //* Handle the first measurement.
-  //*/
-  //virtual void InitialUpdate(TrackedObject* tracked_object, const MeasurementPackage& meas_mackage) = 0;
-
-  /**
-  * Prediction Predicts sigma points, the state, and the state covariance
-  * matrix
-  * @param delta_t Time between k and k+1 in s
-  */
+  //Prediction step common to all sensor types.
   virtual void Prediction(TrackedObject* tracked_object, double delta_t);
-
-  ///**
-  //* Updates the state and the state covariance matrix using a laser measurement
-  //* @param meas_package The measurement at k+1
-  //*/
-  //virtual void Update(TrackedObject* tracked_object, const MeasurementPackage& meas_package) = 0;
 
 protected:
   ///* Process noise standard deviation longitudinal acceleration in m/s^2
@@ -94,6 +82,5 @@ private:
   void GenerateAugmentedSigmaPoints(const TrackedObject* tracked_object, TAugSigmapointMatrix& augSigmaPoints);
   void PredictSigmaPoints(const TAugSigmapointMatrix& augSigmaPoints, long delta_t, TSigmapointsMatrix& sigmaPoints);
   void CalculateMeanAndCovariance(const TSigmapointsMatrix& predictedSigmaPoints, TrackedObject* tracked_object);
-
 };
 
