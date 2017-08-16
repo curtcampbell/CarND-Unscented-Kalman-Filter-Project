@@ -1,5 +1,6 @@
 #include <uWS/uWS.h>
 #include <iostream>
+#include <memory>
 #include "json.hpp"
 #include <math.h>
 #include "ukf.h"
@@ -56,7 +57,7 @@ int main()
           
           string sensor_measurment = j[1]["sensor_measurement"];
           
-          MeasurementPackage meas_package;
+          shared_ptr<MeasurementPackage> meas_package;
           istringstream iss(sensor_measurment);
     	  long long timestamp;
 
@@ -65,28 +66,16 @@ int main()
     	  iss >> sensor_type;
 
     	  if (sensor_type.compare("L") == 0) {
-      	  		meas_package.sensor_type_ = MeasurementPackage::LASER;
-          		meas_package.raw_measurements_ = VectorXd(2);
           		float px;
       	  		float py;
-          		iss >> px;
-          		iss >> py;
-          		meas_package.raw_measurements_ << px, py;
-          		iss >> timestamp;
-          		meas_package.timestamp_ = timestamp;
+          		iss >> px >> py >> timestamp;
+                meas_package = make_shared<LidarMeasurement>(timestamp, px, py);
           } else if (sensor_type.compare("R") == 0) {
-
-      	  		meas_package.sensor_type_ = MeasurementPackage::RADAR;
-          		meas_package.raw_measurements_ = VectorXd(3);
           		float ro;
       	  		float theta;
       	  		float ro_dot;
-          		iss >> ro;
-          		iss >> theta;
-          		iss >> ro_dot;
-          		meas_package.raw_measurements_ << ro,theta, ro_dot;
-          		iss >> timestamp;
-          		meas_package.timestamp_ = timestamp;
+          		iss >> ro >> theta >> ro_dot >> timestamp;
+                meas_package = make_shared<RadarMeasurement>(timestamp, ro, theta, ro_dot);
           }
           float x_gt;
     	  float y_gt;
@@ -103,17 +92,17 @@ int main()
     	  gt_values(3) = vy_gt;
     	  ground_truth.push_back(gt_values);
           
-          //Call ProcessMeasurment(meas_package) for Kalman filter
-    	  ukf.ProcessMeasurement(meas_package);    	  
+        //Call ProcessMeasurment(meas_package) for Kalman filter
+    	  //ukf.ProcessMeasurement(meas_package.get()); 
 
     	  //Push the current estimated x,y positon from the Kalman filter's state vector
 
     	  VectorXd estimate(4);
 
-    	  double p_x = ukf.x_(0);
-    	  double p_y = ukf.x_(1);
-    	  double v  = ukf.x_(2);
-    	  double yaw = ukf.x_(3);
+    	  double p_x = ukf.tracked_object_.x_(0);
+    	  double p_y = ukf.tracked_object_.x_(1);
+    	  double v  = ukf.tracked_object_.x_(2);
+    	  double yaw = ukf.tracked_object_.x_(3);
 
     	  double v1 = cos(yaw)*v;
     	  double v2 = sin(yaw)*v;
@@ -135,7 +124,7 @@ int main()
           msgJson["rmse_vx"] = RMSE(2);
           msgJson["rmse_vy"] = RMSE(3);
           auto msg = "42[\"estimate_marker\"," + msgJson.dump() + "]";
-          // std::cout << msg << std::endl;
+          std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 	  
         }
