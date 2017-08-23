@@ -15,8 +15,6 @@ const int noise_state_dimension = 2;
 const int aug_state_dimension = state_dimension + noise_state_dimension;
 const int sigma_point_dimension = 2 * aug_state_dimension + 1;
 
-//using TStateVector = Eigen::Matrix<double, state_dimension, 1>;
-//using TCovarianceMatrix = Eigen::Matrix<double, state_dimension, state_dimension>;
 using TSigmapointsMatrix = Eigen::Matrix<double, state_dimension, sigma_point_dimension>;
 
 using TNoiseCovarianceMatrix = Eigen::Matrix<double, noise_state_dimension, noise_state_dimension>;
@@ -77,6 +75,8 @@ protected:
 
   //Predicted sigma points
   TSigmapointsMatrix Xsig_;
+
+  TWeightVector weights_;
 
 private:
   void GenerateAugmentedSigmaPoints(const TrackedObject* tracked_object, TAugSigmapointMatrix& augSigmaPoints);

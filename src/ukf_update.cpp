@@ -12,7 +12,9 @@ UnscentedKalmanUpdateBase::UnscentedKalmanUpdateBase(const TNoiseCovarianceMatri
   lambda_(lambda),
   Xsig_(TSigmapointsMatrix::Zero())
 {
-
+  //Initialize weights for sigma points.
+  weights_.fill(0.5 / (aug_state_dimension + lambda_));
+  weights_(0) = lambda_ / (aug_state_dimension + lambda_);
 }
 
 void UnscentedKalmanUpdateBase::Prediction(TrackedObject* tracked_object, double delta_t)
@@ -49,15 +51,15 @@ void UnscentedKalmanUpdateBase::GenerateAugmentedSigmaPoints(const TrackedObject
   augSigmaPoints.col(0) = x_aug;
   for (int j = 0; j < aug_state_dimension; ++j)
   {
-    augSigmaPoints.col(j + 1) = x_aug + A_scaled.col(j);
-    augSigmaPoints.col(j + 1 + aug_state_dimension) = x_aug + A_scaled.col(j);
+    augSigmaPoints.col(j + 1)                       = x_aug + A_scaled.col(j);
+    augSigmaPoints.col(j + 1 + aug_state_dimension) = x_aug - A_scaled.col(j);
   }
 }
 
 void UnscentedKalmanUpdateBase::PredictSigmaPoints(const TAugSigmapointMatrix& augSigmaPoints, long delta_t, TSigmapointsMatrix& predictedSigmaPoints)
 {
   //predict sigma points
-  for (int i = 0, size = 2 * aug_state_dimension + 1; i< size; i++)
+  for (int i = 0; i < sigma_point_dimension; ++i)
   {
     //extract values for better readability
     double p_x = augSigmaPoints(0, i);
@@ -105,28 +107,26 @@ void UnscentedKalmanUpdateBase::PredictSigmaPoints(const TAugSigmapointMatrix& a
 void UnscentedKalmanUpdateBase::CalculateMeanAndCovariance(const TSigmapointsMatrix& predictedSigmaPoints, TrackedObject* tracked_object)
 {
   //Set some references
-  TrackedObject::TStateVector& x = tracked_object->x_;
+  TrackedObject::TStateVector&x = tracked_object->x_;
   TrackedObject::TCovarianceMatrix& P = tracked_object->P_;
 
-  TWeightVector weights;
-  weights.fill(0.5 / (aug_state_dimension + lambda_));
-
   //predicted state mean
-  for (int i = 0; i < sigma_point_dimension; i++) {  //iterate over sigma points
-    x = x + weights(i) * predictedSigmaPoints.col(i);
+  x.fill(0.0);
+  for (int i = 0; i < sigma_point_dimension; ++i) {  //iterate over sigma points
+    x = x + weights_(i) * predictedSigmaPoints.col(i);
   }
 
   //predicted state covariance matrix
-  for (int i = 0; i < sigma_point_dimension; i++) 
-  {  //iterate over sigma points
-
-                                                     // state difference
+  P.fill(0.0);
+  for (int i = 0; i < sigma_point_dimension; ++i) 
+  {  
+    // state difference
     TrackedObject::TStateVector x_diff = predictedSigmaPoints.col(i) - x;
     //angle normalization
-    //while (x_diff(3)> M_PI) x_diff(3) -= 2.0*M_PI;
-    //while (x_diff(3)< -M_PI) x_diff(3) += 2.0*M_PI;
+    while (x_diff(3)> M_PI) x_diff(3) -= 2.0*M_PI;
+    while (x_diff(3)< -M_PI) x_diff(3) += 2.0*M_PI;
 
-    P = P + weights(i) * x_diff * x_diff.transpose();
+    P = P + weights_(i) * x_diff * x_diff.transpose();
   }
 }
 

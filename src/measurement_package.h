@@ -14,7 +14,7 @@ struct MeasurementPackage {
   virtual ~MeasurementPackage() {}
 
   SensorType GetSensorType() const { return sensor_type_;  }
-  long GetTimeStamp() const { return timestamp_; }
+  long long GetTimeStamp() const { return timestamp_; }
 
   MeasurementPackage():sensor_type_(UNDEFINED) {}
 
@@ -25,15 +25,21 @@ private:
 
 struct LidarMeasurement: public MeasurementPackage
 {
-    using TLidarMeasurementVector = Eigen::Matrix<double, 2, 1>;
+  static const int measurment_dim = 2;
+  using TLidarMeasurementVector = Eigen::Matrix<double, measurment_dim, 1>;
 
     LidarMeasurement(long long timestamp, float x,float y): x_(x), y_(y), MeasurementPackage(MeasurementPackage::LASER, timestamp){    }
     virtual ~LidarMeasurement() {}
 
     float GetX() const { return x_; }
-    float GetY() const { return x_; }
+    float GetY() const { return y_; }
 
-    TLidarMeasurementVector GetVector() const { TLidarMeasurementVector() << x_, y_; }
+    TLidarMeasurementVector GetVector() const 
+    { 
+      TLidarMeasurementVector vector;
+      vector << x_, y_;
+      return vector;
+    }
 
 private:
     float x_;
@@ -42,21 +48,27 @@ private:
 
 struct RadarMeasurement: public MeasurementPackage
 {
-    using TRadarMeasurementVector = Eigen::Matrix<double, 3, 1>;
+    static const int measurment_dim = 3;
+    using TRadarMeasurementVector = Eigen::Matrix<double, measurment_dim, 1>;
 
-    RadarMeasurement(long long timestamp, float ro, float theta, float ro_dot) : ro_(ro), theta_(theta), ro_dot_(ro_dot), MeasurementPackage(MeasurementPackage::RADAR, timestamp) {}
+    RadarMeasurement(long long timestamp, float rho, float theta, float rho_dot) : rho_(rho), theta_(theta), rho_dot_(rho_dot), MeasurementPackage(MeasurementPackage::RADAR, timestamp) {}
     virtual ~RadarMeasurement() {}
 
-    float GetRo() const { return ro_; }
-    float GetTheta() const { return ro_; }
-    float GetRoDot() const { return ro_dot_; }
+    float GetRho() const { return rho_; }
+    float GetTheta() const { return theta_; }
+    float GetRhoDot() const { return rho_dot_; }
 
-    TRadarMeasurementVector GetVector() const { TRadarMeasurementVector() << ro_, theta_, ro_dot_; }
+    TRadarMeasurementVector GetVector() const 
+    { 
+      TRadarMeasurementVector vector;;
+      vector << rho_, theta_, rho_dot_;
+      return vector;
+    }
 
 private:
-    float ro_;
+    float rho_;
     float theta_;
-    float ro_dot_;
+    float rho_dot_;
 };
 
 #endif /* MEASUREMENT_PACKAGE_H_ */

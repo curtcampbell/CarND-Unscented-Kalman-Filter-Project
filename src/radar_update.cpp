@@ -20,10 +20,17 @@ RadarUpdate::~RadarUpdate() {}
 
 void RadarUpdate::InitialUpdate(TrackedObject* tracked_object, const MeasurementPackage& meas_mackage)
 {
-  tracked_object->P_ = TrackedObject::TCovarianceMatrix::Identity();
+  const RadarMeasurement& measurement = dynamic_cast<const RadarMeasurement&>(meas_mackage);
 
-  //Todo change this to real initilization.
-  tracked_object->x_ = TrackedObject::TStateVector::Zero();
+  tracked_object->P_ = 0.01 * TrackedObject::TCovarianceMatrix::Identity();
+
+  auto rho = measurement.GetRho();
+  auto theta = measurement.GetTheta();
+
+  auto py = rho * sin(theta);
+  auto px = rho * cos(theta);
+
+  tracked_object->x_ <<  px, py, 0, 0, 0;
 }
 
 /**
@@ -56,8 +63,8 @@ void RadarUpdate::PredictMeasurement(TRadarSigmaPointMatrix& Zsig, TRadarVector&
 {
   //transform sigma points into measurement space
   for (int i = 0; i < sigma_point_dimension; i++) {  //2n+1 simga points
-
-                                                     // extract values for better readibility
+    
+    // extract values for better readibility
     double p_x = Xsig_(0, i);
     double p_y = Xsig_(1, i);
     double v = Xsig_(2, i);
@@ -67,20 +74,16 @@ void RadarUpdate::PredictMeasurement(TRadarSigmaPointMatrix& Zsig, TRadarVector&
     double v2 = sin(yaw)*v;
 
     // measurement model
-    Zsig(0, i) = sqrt(p_x*p_x + p_y*p_y);                        //r
-    Zsig(1, i) = atan2(p_y, p_x);                                 //phi
+    Zsig(0, i) = sqrt(p_x*p_x + p_y*p_y);                       //r
+    Zsig(1, i) = atan2(p_y, p_x);                               //phi
     Zsig(2, i) = (p_x*v1 + p_y*v2) / sqrt(p_x*p_x + p_y*p_y);   //r_dot
-
   }
 
   //mean predicted measurement
   z_pred = TRadarVector::Zero();
 
-  TWeightVector weights;
-  weights.fill(0.5 / (aug_state_dimension + lambda_));
-
   for (int i = 0; i < sigma_point_dimension; i++) {
-    z_pred = z_pred + weights(i) * Zsig.col(i);
+    z_pred = z_pred + weights_(i) * Zsig.col(i);
   }
 
   //measurement covariance matrix S
@@ -88,13 +91,13 @@ void RadarUpdate::PredictMeasurement(TRadarSigmaPointMatrix& Zsig, TRadarVector&
 
   for (int i = 0; i < sigma_point_dimension; i++) {
     //residual
-    VectorXd z_diff = Zsig.col(i) - z_pred;
+    TRadarVector z_diff = Zsig.col(i) - z_pred;
 
     //angle normalization
-    //while (z_diff(1)> M_PI) z_diff(1) -= 2.*M_PI;
-    //while (z_diff(1)<-M_PI) z_diff(1) += 2.*M_PI;
+    while (z_diff(1)> M_PI) z_diff(1) -= 2.*M_PI;
+    while (z_diff(1)<-M_PI) z_diff(1) += 2.*M_PI;
 
-    S = S + weights(i) * z_diff * z_diff.transpose();
+    S = S + weights_(i) * z_diff * z_diff.transpose();
   }
 
   //add measurement noise covariance matrix
@@ -108,48 +111,38 @@ void RadarUpdate::PredictMeasurement(TRadarSigmaPointMatrix& Zsig, TRadarVector&
 
 void RadarUpdate::UpdateState(const TRadarVector& measurement, const TRadarSigmaPointMatrix& Zsig, const TRadarVector& z_pred, const TRadarCovarianceMatrix& S, TrackedObject* tracked_object)
 {
-  using TCrossCorrelationMatrix = Eigen::Matrix<double, state_dimension, 3>;
+  using TCrossCorrelationMatrix = Eigen::Matrix<double, state_dimension, measurment_dim>;
 
   TrackedObject::TStateVector& x = tracked_object->x_;
   TrackedObject::TCovarianceMatrix& P = tracked_object->P_;
 
-  //set vector for weights
-  double weight = 0.5 / (aug_state_dimension + lambda_);
-
-  TWeightVector weights;
-  weights(0) = lambda_ / (lambda_ + aug_state_dimension);
-  for (int i = 1; i<sigma_point_dimension; i++) {
-    weights(i) = weight;
-  }
-
   //calculate cross correlation matrix
   TCrossCorrelationMatrix Tc = TCrossCorrelationMatrix::Zero();
-  for (int i = 0; i < sigma_point_dimension; i++) {  //2n+1 simga points
-
+  for (int i = 0; i < sigma_point_dimension; ++i) {  //2n+1 simga points
                                                      //residual
-    VectorXd z_diff = Zsig.col(i) - z_pred;
+    TRadarVector z_diff = Zsig.col(i) - z_pred;
     //angle normalization
-    //while (z_diff(1)> M_PI) z_diff(1) -= 2.*M_PI;
-    //while (z_diff(1)<-M_PI) z_diff(1) += 2.*M_PI;
+    while (z_diff(1)> M_PI) z_diff(1) -= 2.*M_PI;
+    while (z_diff(1)<-M_PI) z_diff(1) += 2.*M_PI;
 
     // state difference
-    VectorXd x_diff = Xsig_.col(i) - x;
+    TrackedObject::TStateVector x_diff = Xsig_.col(i) - x;
     //angle normalization
-    //while (x_diff(3)> M_PI) x_diff(3) -= 2.*M_PI;
-    //while (x_diff(3)<-M_PI) x_diff(3) += 2.*M_PI;
+    while (x_diff(3)> M_PI) x_diff(3) -= 2.*M_PI;
+    while (x_diff(3)<-M_PI) x_diff(3) += 2.*M_PI;
 
-    Tc = Tc + weights(i) * x_diff * z_diff.transpose();
+    Tc = Tc + weights_(i) * x_diff * z_diff.transpose();
   }
 
   //Kalman gain K;
   MatrixXd K = Tc * S.inverse();
 
   //residual
-  VectorXd z_diff = measurement - z_pred;
+  TRadarVector z_diff = measurement - z_pred;
 
   //angle normalization
-  //while (z_diff(1)> M_PI) z_diff(1) -= 2.*M_PI;
-  //while (z_diff(1)<-M_PI) z_diff(1) += 2.*M_PI;
+  while (z_diff(1)> M_PI) z_diff(1) -= 2.*M_PI;
+  while (z_diff(1)<-M_PI) z_diff(1) += 2.*M_PI;
 
   //update state mean and covariance matrix
   x = x + K * z_diff;

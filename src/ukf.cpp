@@ -2,6 +2,7 @@
 #include "Eigen/Dense"
 #include "radar_update.h"
 #include "lidar_update.h"
+#include "no_op_update.h"
 #include <iostream>
 
 using namespace std;
@@ -17,11 +18,11 @@ UKF::UKF() :
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_(true),
   // if this is false, radar measurements will be ignored (except during init)
-  use_radar_(true),
+  use_radar_(false),
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_(30),
+  std_a_(.00000010),
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_(30)
+  std_yawdd_(1)
 {
 
   /**
@@ -41,9 +42,9 @@ UKF::UKF() :
     0.0, std_yawdd_ * std_yawdd_;
 
   // Laser measurement noise standard deviation position1 in m
-  auto std_laspx = 0.15;
+  auto std_laspx = 0.015;
   // Laser measurement noise standard deviation position2 in m
-  auto std_laspy = 0.15;
+  auto std_laspy = 0.015;
   auto laserUpdate = make_shared<LaserUpdate>(Q, std_laspx, std_laspy, lambda);
 
 
@@ -77,6 +78,17 @@ void UKF::ProcessMeasurement(const MeasurementPackage* meas_package) {
     updater->InitialUpdate(&tracked_object_, *meas_package);
 
     tracked_object_.timestamp_ = meas_package->GetTimeStamp();
+
+    //Remove update objects we aren't going to use.
+    if (!use_laser_)
+    {
+      updater_map_[MeasurementPackage::LASER] = make_shared<NoOpUpdate>();
+    }
+
+    if (!use_radar_)
+    {
+      updater_map_[MeasurementPackage::RADAR] = make_shared<NoOpUpdate>();
+    }
 
     is_initialized_ = true;
     return;

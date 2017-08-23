@@ -8,13 +8,14 @@
 class RadarUpdate : virtual public UnscentedKalmanUpdateBase
 {
 public:
-  using TRadarVector = Eigen::Matrix<double, 3, 1>;
-  using TRadarCovarianceMatrix = Eigen::Matrix<double, 3, 3>;
-  using TRadarSigmaPointMatrix = Eigen::Matrix<double, 3, sigma_point_dimension>;
+  static const int measurment_dim = RadarMeasurement::measurment_dim;
+
+  using TRadarVector = Eigen::Matrix<double, measurment_dim, 1>;
+  using TRadarCovarianceMatrix = Eigen::Matrix<double, measurment_dim, measurment_dim>;
+  using TRadarSigmaPointMatrix = Eigen::Matrix<double, measurment_dim, sigma_point_dimension>;
 
   RadarUpdate(const TNoiseCovarianceMatrix& process_noise_covariance, double std_radr, double std_radphi, double std_radrd, double lambda);
   virtual ~RadarUpdate();
-
 
   virtual void InitialUpdate(TrackedObject* tracked_object, const MeasurementPackage& meas_mackage);
 
