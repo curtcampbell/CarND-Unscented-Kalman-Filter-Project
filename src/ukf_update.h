@@ -9,7 +9,6 @@
 
 //The dimensions of our state vectors and the noise portion of our 
 //augmented state vector are known at compile time, so why not use them.
-//const int state_dimension = 5;
 const int noise_state_dimension = 2;
 
 const int aug_state_dimension = state_dimension + noise_state_dimension;
@@ -55,23 +54,20 @@ class UnscentedKalmanUpdateBase: virtual public UKF_update
 public:
   using TWeightVector = Eigen::Matrix<double, sigma_point_dimension, 1>;
 
-  UnscentedKalmanUpdateBase(const TNoiseCovarianceMatrix& process_noise_covariance, double lambda);
+  UnscentedKalmanUpdateBase(double std_a, double std_yawd, double lambda);
 
   //Prediction step common to all sensor types.
   virtual void Prediction(TrackedObject* tracked_object, double delta_t);
 
 protected:
   ///* Process noise standard deviation longitudinal acceleration in m/s^2
-  double std_a_;
+  double std_a_2;
 
   ///* Process noise standard deviation yaw acceleration in rad/s^2
-  double std_yawdd_;
+  double std_yawdd_2;
 
   ///* Sigma point spreading parameter
   double lambda_;
-
-  //Q - noise covariance
-  TNoiseCovarianceMatrix noise_covariance_;
 
   //Predicted sigma points
   TSigmapointsMatrix Xsig_;
@@ -79,8 +75,16 @@ protected:
   TWeightVector weights_;
 
 private:
-  void GenerateAugmentedSigmaPoints(const TrackedObject* tracked_object, TAugSigmapointMatrix& augSigmaPoints);
-  void PredictSigmaPoints(const TAugSigmapointMatrix& augSigmaPoints, long delta_t, TSigmapointsMatrix& sigmaPoints);
-  void CalculateMeanAndCovariance(const TSigmapointsMatrix& predictedSigmaPoints, TrackedObject* tracked_object);
+  void GenerateAugmentedSigmaPoints(const TrackedObject::TStateVector& X, 
+                                    const TrackedObject::TCovarianceMatrix& P, 
+                                    TAugSigmapointMatrix & augSigmaPoints);
+
+  void PredictSigmaPoints(const TAugSigmapointMatrix& augSigmaPoints, 
+                          long delta_t, 
+                          TSigmapointsMatrix& sigmaPoints);
+
+  void CalculateMeanAndCovariance(const TSigmapointsMatrix& predictedSigmaPoints, 
+                                  TrackedObject::TStateVector& x, 
+                                  TrackedObject::TCovarianceMatrix& P);
 };
 

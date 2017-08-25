@@ -1,7 +1,7 @@
 #include "lidar_update.h"
 
-LaserUpdate::LaserUpdate(const TNoiseCovarianceMatrix& process_noise_covariance, double std_laspx, double std_laspy, double lambda) :
-  UnscentedKalmanUpdateBase(process_noise_covariance, lambda),
+LaserUpdate::LaserUpdate(double std_a, double std_yawd, double std_laspx, double std_laspy, double lambda) :
+  UnscentedKalmanUpdateBase(std_a, std_yawd, lambda),
   std_laspx_(std_laspx),
   std_laspy_(std_laspy)
 {
@@ -12,7 +12,11 @@ LaserUpdate::~LaserUpdate() {}
 void LaserUpdate::InitialUpdate(TrackedObject* tracked_object, const MeasurementPackage& meas_mackage)
 {
   const LidarMeasurement& measurement = dynamic_cast<const LidarMeasurement&>(meas_mackage);
-  tracked_object->P_ =  TrackedObject::TCovarianceMatrix::Identity();
+  tracked_object->P_ <<  .01,  0,    0,    0,     0,
+                         0,  0.01,    0,    0,     0,
+                         0,  0,    1,    0,     0,
+                         0,  0,    0,    1,     0,
+                         0,  0,    0,    0,     1;
 
   tracked_object->x_ << measurement.GetX(), measurement.GetY(), 0, 0, 0;
 }
@@ -25,10 +29,6 @@ void LaserUpdate::Update(TrackedObject* tracked_object, const MeasurementPackage
 {
   /**
   TODO:
-
-  Complete this function! Use lidar data to update the belief about the object's
-  position. Modify the state vector, x_, and covariance, P_.
-
   You'll also need to calculate the lidar NIS.
   */
   const LidarMeasurement& measurement = dynamic_cast<const LidarMeasurement&>(meas_package);
@@ -46,27 +46,21 @@ void LaserUpdate::Update(TrackedObject* tracked_object, const MeasurementPackage
 void LaserUpdate::PredictMeasurement(TLidarSigmaPointMatrix& Zsig, TLidarVector& z_pred, TLidarCovarianceMatrix& S)
 {
   //transform sigma points into measurement space
-  for (int i = 0; i < sigma_point_dimension; i++) {
-
-    double p_x = Xsig_(0, i);
-    double p_y = Xsig_(1, i);
-    double v = Xsig_(2, i);
-    double yaw = Xsig_(3, i);
-
+  for (int i = 0; i < sigma_point_dimension; ++i) {
     // measurement model
-    Zsig(0, i) = p_x;    //px
-    Zsig(1, i) = p_y;    //py
+    Zsig(0, i) = Xsig_(0, i);    //px
+    Zsig(1, i) = Xsig_(1, i);    //py
   }
 
   //mean predicted measurement
   z_pred = TLidarVector::Zero();
 
-  for (int i = 0; i < sigma_point_dimension; i++) {
+  for (int i = 0; i < sigma_point_dimension; ++i) {
     z_pred = z_pred + weights_(i) * Zsig.col(i);
   }
 
   //measurement covariance matrix S
-  S.fill(0.0);
+  S = TLidarCovarianceMatrix::Zero();
 
   for (int i = 0; i < sigma_point_dimension; i++) {
     //residual

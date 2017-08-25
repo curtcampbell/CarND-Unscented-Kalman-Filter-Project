@@ -3,7 +3,8 @@
 #include "ukf_update.h"
 
 ///
-// This class has the lidar specific Unscented Kalman Filter update logic.
+// This class performs no operations during prediction and update protions of the UKF 
+// algorithm.  It can be substituted to turn off processing of sensor inputs.
 class NoOpUpdate : virtual public UKF_update
 {
 public:

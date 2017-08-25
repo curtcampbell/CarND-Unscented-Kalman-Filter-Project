@@ -1,14 +1,13 @@
 #include "radar_update.h"
 
-
 using namespace std;
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
 
-RadarUpdate::RadarUpdate(const TNoiseCovarianceMatrix& process_noise_covariance, double std_radr, double std_radphi, double std_radrd, double lambda) :
-  UnscentedKalmanUpdateBase(process_noise_covariance, lambda),
+RadarUpdate::RadarUpdate(double std_a, double std_yawd, double std_radr, double std_radphi, double std_radrd, double lambda) :
+  UnscentedKalmanUpdateBase(std_a, std_yawd, lambda),
   std_radr_(std_radr),
   std_radphi_(std_radphi),
   std_radrd_(std_radrd)
@@ -22,7 +21,11 @@ void RadarUpdate::InitialUpdate(TrackedObject* tracked_object, const Measurement
 {
   const RadarMeasurement& measurement = dynamic_cast<const RadarMeasurement&>(meas_mackage);
 
-  tracked_object->P_ = 0.01 * TrackedObject::TCovarianceMatrix::Identity();
+  tracked_object->P_ << 1, 0, 0, 0, 0,
+                        0, 1, 0, 0, 0,
+                        0, 0, 1, 0, 0,
+                        0, 0, 0, 1, 0,
+                        0, 0, 0, 0, 1;
 
   auto rho = measurement.GetRho();
   auto theta = measurement.GetTheta();
@@ -52,11 +55,10 @@ void RadarUpdate::Update(TrackedObject* tracked_object, const MeasurementPackage
 
   TRadarSigmaPointMatrix Zsig;
   TRadarVector z_pred;
-  TRadarVector z = measurement.GetVector();
   TRadarCovarianceMatrix S;
 
   PredictMeasurement(Zsig, z_pred, S);
-  UpdateState(z, Zsig, z_pred, S, tracked_object);
+  UpdateState(measurement.GetVector(), Zsig, z_pred, S, tracked_object->x_, tracked_object->P_);
 }
 
 void RadarUpdate::PredictMeasurement(TRadarSigmaPointMatrix& Zsig, TRadarVector& z_pred, TRadarCovarianceMatrix& S)
@@ -83,11 +85,11 @@ void RadarUpdate::PredictMeasurement(TRadarSigmaPointMatrix& Zsig, TRadarVector&
   z_pred = TRadarVector::Zero();
 
   for (int i = 0; i < sigma_point_dimension; i++) {
-    z_pred = z_pred + weights_(i) * Zsig.col(i);
+    z_pred += weights_(i) * Zsig.col(i);
   }
 
   //measurement covariance matrix S
-  S.fill(0.0);
+  S = TRadarCovarianceMatrix::Zero();
 
   for (int i = 0; i < sigma_point_dimension; i++) {
     //residual
@@ -97,7 +99,7 @@ void RadarUpdate::PredictMeasurement(TRadarSigmaPointMatrix& Zsig, TRadarVector&
     while (z_diff(1)> M_PI) z_diff(1) -= 2.*M_PI;
     while (z_diff(1)<-M_PI) z_diff(1) += 2.*M_PI;
 
-    S = S + weights_(i) * z_diff * z_diff.transpose();
+    S += weights_(i) * z_diff * z_diff.transpose();
   }
 
   //add measurement noise covariance matrix
@@ -109,12 +111,14 @@ void RadarUpdate::PredictMeasurement(TRadarSigmaPointMatrix& Zsig, TRadarVector&
   S = S + R;
 }
 
-void RadarUpdate::UpdateState(const TRadarVector& measurement, const TRadarSigmaPointMatrix& Zsig, const TRadarVector& z_pred, const TRadarCovarianceMatrix& S, TrackedObject* tracked_object)
+void RadarUpdate::UpdateState(const TRadarVector& measurement,
+                              const TRadarSigmaPointMatrix& Zsig,
+                              const TRadarVector& z_pred,
+                              const TRadarCovarianceMatrix& S,
+                              TrackedObject::TStateVector& x,
+                              TrackedObject::TCovarianceMatrix& P)
 {
   using TCrossCorrelationMatrix = Eigen::Matrix<double, state_dimension, measurment_dim>;
-
-  TrackedObject::TStateVector& x = tracked_object->x_;
-  TrackedObject::TCovarianceMatrix& P = tracked_object->P_;
 
   //calculate cross correlation matrix
   TCrossCorrelationMatrix Tc = TCrossCorrelationMatrix::Zero();
@@ -131,7 +135,7 @@ void RadarUpdate::UpdateState(const TRadarVector& measurement, const TRadarSigma
     while (x_diff(3)> M_PI) x_diff(3) -= 2.*M_PI;
     while (x_diff(3)<-M_PI) x_diff(3) += 2.*M_PI;
 
-    Tc = Tc + weights_(i) * x_diff * z_diff.transpose();
+    Tc += weights_(i) * x_diff * z_diff.transpose();
   }
 
   //Kalman gain K;

@@ -7,8 +7,9 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
-UnscentedKalmanUpdateBase::UnscentedKalmanUpdateBase(const TNoiseCovarianceMatrix& process_noise_covariance, double lambda) :
-  noise_covariance_(process_noise_covariance),
+UnscentedKalmanUpdateBase::UnscentedKalmanUpdateBase(double std_a, double std_yawd, double lambda) :
+  std_a_2(std_a*std_a),
+  std_yawdd_2(std_yawd*std_yawd),
   lambda_(lambda),
   Xsig_(TSigmapointsMatrix::Zero())
 {
@@ -21,20 +22,20 @@ void UnscentedKalmanUpdateBase::Prediction(TrackedObject* tracked_object, double
 {
   TAugSigmapointMatrix augSigmaPoints;
 
-  GenerateAugmentedSigmaPoints(tracked_object, augSigmaPoints);
+  GenerateAugmentedSigmaPoints(tracked_object->x_, tracked_object->P_, augSigmaPoints);
   PredictSigmaPoints(augSigmaPoints, delta_t, Xsig_);
-  CalculateMeanAndCovariance(Xsig_, tracked_object);
+  CalculateMeanAndCovariance(Xsig_, tracked_object->x_, tracked_object->P_);
 }
 
-void UnscentedKalmanUpdateBase::GenerateAugmentedSigmaPoints(const TrackedObject* tracked_object, TAugSigmapointMatrix & augSigmaPoints)
+void UnscentedKalmanUpdateBase::GenerateAugmentedSigmaPoints(const TrackedObject::TStateVector& X, 
+                                                             const TrackedObject::TCovarianceMatrix& P, 
+                                                             TAugSigmapointMatrix & augSigmaPoints)
 {
-  const TrackedObject::TStateVector& x = tracked_object->x_;
-  const TrackedObject::TCovarianceMatrix& P = tracked_object->P_;
-
   //create augmented state covariance
   TAugCovarianceMatrix P_aug = TAugCovarianceMatrix::Zero();
   P_aug.topLeftCorner<state_dimension, state_dimension>() = P;
-  P_aug.bottomRightCorner<noise_state_dimension, noise_state_dimension>() = noise_covariance_;
+  P_aug.bottomRightCorner<noise_state_dimension, noise_state_dimension>() << std_a_2,           0,
+                                                                                   0, std_yawdd_2;
 
   //Create square root matrix
   TAugCovarianceMatrix A_aug = P_aug.llt().matrixL();
@@ -45,7 +46,7 @@ void UnscentedKalmanUpdateBase::GenerateAugmentedSigmaPoints(const TrackedObject
 
   //Augmented mean vector
   TAugStateVector x_aug = TAugStateVector::Zero();
-  x_aug.head<state_dimension>() = x;
+  x_aug.head<state_dimension>() = X;
 
   //Fill in the sigma point matrix
   augSigmaPoints.col(0) = x_aug;
@@ -104,20 +105,16 @@ void UnscentedKalmanUpdateBase::PredictSigmaPoints(const TAugSigmapointMatrix& a
   }
 }
 
-void UnscentedKalmanUpdateBase::CalculateMeanAndCovariance(const TSigmapointsMatrix& predictedSigmaPoints, TrackedObject* tracked_object)
+void UnscentedKalmanUpdateBase::CalculateMeanAndCovariance(const TSigmapointsMatrix& predictedSigmaPoints, TrackedObject::TStateVector& x, TrackedObject::TCovarianceMatrix& P)
 {
-  //Set some references
-  TrackedObject::TStateVector&x = tracked_object->x_;
-  TrackedObject::TCovarianceMatrix& P = tracked_object->P_;
-
   //predicted state mean
-  x.fill(0.0);
+  x = TrackedObject::TStateVector::Zero();
   for (int i = 0; i < sigma_point_dimension; ++i) {  //iterate over sigma points
-    x = x + weights_(i) * predictedSigmaPoints.col(i);
+    x += weights_(i) * predictedSigmaPoints.col(i);
   }
 
   //predicted state covariance matrix
-  P.fill(0.0);
+  P = TrackedObject::TCovarianceMatrix::Zero();
   for (int i = 0; i < sigma_point_dimension; ++i) 
   {  
     // state difference
@@ -126,7 +123,7 @@ void UnscentedKalmanUpdateBase::CalculateMeanAndCovariance(const TSigmapointsMat
     while (x_diff(3)> M_PI) x_diff(3) -= 2.0*M_PI;
     while (x_diff(3)< -M_PI) x_diff(3) += 2.0*M_PI;
 
-    P = P + weights_(i) * x_diff * x_diff.transpose();
+    P += weights_(i) * x_diff * x_diff.transpose();
   }
 }
 

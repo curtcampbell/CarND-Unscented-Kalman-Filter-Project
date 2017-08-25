@@ -18,11 +18,11 @@ UKF::UKF() :
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_(true),
   // if this is false, radar measurements will be ignored (except during init)
-  use_radar_(false),
+  use_radar_(true),
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_(.00000010),
+  std_a_(0.015),
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_(1)
+  std_yawdd_(0.3)
 {
 
   /**
@@ -33,19 +33,13 @@ UKF::UKF() :
   Hint: one or more values initialized above might be wildly off...
   */
 
-  //TODO:  verify this.
-  double lambda = 3 - state_dimension;
-
-  //noise_covariance_
-  TNoiseCovarianceMatrix Q;
-  Q << std_a_ * std_a_, 0.0,
-    0.0, std_yawdd_ * std_yawdd_;
+  double lambda = 3 - aug_state_dimension;
 
   // Laser measurement noise standard deviation position1 in m
   auto std_laspx = 0.015;
   // Laser measurement noise standard deviation position2 in m
   auto std_laspy = 0.015;
-  auto laserUpdate = make_shared<LaserUpdate>(Q, std_laspx, std_laspy, lambda);
+  auto laserUpdate = make_shared<LaserUpdate>(std_a_, std_yawdd_, std_laspx, std_laspy, lambda);
 
 
   // Radar measurement noise standard deviation radius in m
@@ -54,7 +48,7 @@ UKF::UKF() :
   auto std_radphi = 0.03;
   // Radar measurement noise standard deviation radius change in m/s
   auto std_radrd = 0.3;
-  auto radarUpdate = make_shared<RadarUpdate>(Q, std_radr, std_radphi, std_radrd, lambda);
+  auto radarUpdate = make_shared<RadarUpdate>(std_a_, std_yawdd_, std_radr, std_radphi, std_radrd, lambda);
 
   //Add the supported sensor types to our lookup table.
   updater_map_[MeasurementPackage::LASER] = laserUpdate;

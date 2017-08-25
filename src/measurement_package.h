@@ -60,7 +60,7 @@ struct RadarMeasurement: public MeasurementPackage
 
     TRadarMeasurementVector GetVector() const 
     { 
-      TRadarMeasurementVector vector;;
+      TRadarMeasurementVector vector;
       vector << rho_, theta_, rho_dot_;
       return vector;
     }

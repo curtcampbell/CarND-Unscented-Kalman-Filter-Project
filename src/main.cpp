@@ -69,13 +69,14 @@ int main()
           		float px;
       	  		float py;
           		iss >> px >> py >> timestamp;
-                meas_package = make_shared<LidarMeasurement>(timestamp, px, py);
+              std::cout << "px:" << px << " py:" << py << std::endl;
+              meas_package = make_shared<LidarMeasurement>(timestamp, px, py);
           } else if (sensor_type.compare("R") == 0) {
           		float ro;
       	  		float theta;
       	  		float ro_dot;
           		iss >> ro >> theta >> ro_dot >> timestamp;
-                meas_package = make_shared<RadarMeasurement>(timestamp, ro, theta, ro_dot);
+              meas_package = make_shared<RadarMeasurement>(timestamp, ro, theta, ro_dot);
           }
           float x_gt;
     	  float y_gt;
@@ -125,6 +126,7 @@ int main()
           msgJson["rmse_vy"] = RMSE(3);
           auto msg = "42[\"estimate_marker\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
+          std::cout << "P:" << ukf.tracked_object_.P_ << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 	  
         }

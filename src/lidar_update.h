@@ -13,7 +13,7 @@ public:
   using TLidarCovarianceMatrix = Eigen::Matrix<double, measurment_dim, measurment_dim>;
   using TLidarSigmaPointMatrix = Eigen::Matrix<double, measurment_dim, sigma_point_dimension>;
 
-  LaserUpdate(const TNoiseCovarianceMatrix& process_noise_covariance, double std_laspx, double std_laspy, double lambda);
+  LaserUpdate(double std_a, double std_yawd, double std_laspx, double std_laspy, double lambda);
   virtual ~LaserUpdate();
 
   virtual void InitialUpdate(TrackedObject* tracked_object, const MeasurementPackage& meas_mackage);
