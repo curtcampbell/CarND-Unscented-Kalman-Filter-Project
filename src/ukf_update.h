@@ -80,7 +80,7 @@ private:
                                     TAugSigmapointMatrix & augSigmaPoints);
 
   void PredictSigmaPoints(const TAugSigmapointMatrix& augSigmaPoints, 
-                          long delta_t, 
+                          double delta_t, 
                           TSigmapointsMatrix& sigmaPoints);
 
   void CalculateMeanAndCovariance(const TSigmapointsMatrix& predictedSigmaPoints, 

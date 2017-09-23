@@ -12,11 +12,11 @@ LaserUpdate::~LaserUpdate() {}
 void LaserUpdate::InitialUpdate(TrackedObject* tracked_object, const MeasurementPackage& meas_mackage)
 {
   const LidarMeasurement& measurement = dynamic_cast<const LidarMeasurement&>(meas_mackage);
-  tracked_object->P_ <<  .01,  0,    0,    0,     0,
-                         0,  0.01,    0,    0,     0,
-                         0,  0,    1,    0,     0,
-                         0,  0,    0,    1,     0,
-                         0,  0,    0,    0,     1;
+  tracked_object->P_ <<  10,  0,    0,    0,     0,
+                         0,  10,    0,    0,     0,
+                         0,  0,    100,    0,     0,
+                         0,  0,    0,    100,     0,
+                         0,  0,    0,    0,     100;
 
   tracked_object->x_ << measurement.GetX(), measurement.GetY(), 0, 0, 0;
 }

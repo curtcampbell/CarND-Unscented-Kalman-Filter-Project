@@ -57,18 +57,18 @@ void UnscentedKalmanUpdateBase::GenerateAugmentedSigmaPoints(const TrackedObject
   }
 }
 
-void UnscentedKalmanUpdateBase::PredictSigmaPoints(const TAugSigmapointMatrix& augSigmaPoints, long delta_t, TSigmapointsMatrix& predictedSigmaPoints)
+void UnscentedKalmanUpdateBase::PredictSigmaPoints(const TAugSigmapointMatrix& augSigmaPoints, double delta_t, TSigmapointsMatrix& predictedSigmaPoints)
 {
   //predict sigma points
   for (int i = 0; i < sigma_point_dimension; ++i)
   {
     //extract values for better readability
-    double p_x = augSigmaPoints(0, i);
-    double p_y = augSigmaPoints(1, i);
-    double v = augSigmaPoints(2, i);
-    double yaw = augSigmaPoints(3, i);
-    double yawd = augSigmaPoints(4, i);
-    double nu_a = augSigmaPoints(5, i);
+    double p_x =      augSigmaPoints(0, i);
+    double p_y =      augSigmaPoints(1, i);
+    double v =        augSigmaPoints(2, i);
+    double yaw =      augSigmaPoints(3, i);
+    double yawd =     augSigmaPoints(4, i);
+    double nu_a =     augSigmaPoints(5, i);
     double nu_yawdd = augSigmaPoints(6, i);
 
     //predicted state values
@@ -89,12 +89,12 @@ void UnscentedKalmanUpdateBase::PredictSigmaPoints(const TAugSigmapointMatrix& a
     double yawd_p = yawd;
 
     //add noise
-    px_p = px_p + 0.5*nu_a*delta_t*delta_t * cos(yaw);
-    py_p = py_p + 0.5*nu_a*delta_t*delta_t * sin(yaw);
-    v_p = v_p + nu_a*delta_t;
+    px_p += 0.5*nu_a*delta_t*delta_t * cos(yaw);
+    py_p += 0.5*nu_a*delta_t*delta_t * sin(yaw);
+    v_p += nu_a*delta_t;
 
-    yaw_p = yaw_p + 0.5*nu_yawdd*delta_t*delta_t;
-    yawd_p = yawd_p + nu_yawdd*delta_t;
+    yaw_p += 0.5*nu_yawdd*delta_t*delta_t;
+    yawd_p += nu_yawdd*delta_t;
 
     //write predicted sigma point into right column
     predictedSigmaPoints(0, i) = px_p;

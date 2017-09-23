@@ -88,13 +88,13 @@ void UKF::ProcessMeasurement(const MeasurementPackage* meas_package) {
     return;
   }
 
-  float delta_t = (meas_package->GetTimeStamp() - tracked_object_.timestamp_) / 1000000.0f;
+  double delta_t = (meas_package->GetTimeStamp() - tracked_object_.timestamp_) / 1000000.0;
+  tracked_object_.timestamp_ = meas_package->GetTimeStamp();
   if (delta_t > 0.0001)
   {
     updater->Prediction(&tracked_object_, delta_t);
   }
   updater->Update(&tracked_object_, *meas_package);
-  tracked_object_.timestamp_ = meas_package->GetTimeStamp();
 }
 
 
