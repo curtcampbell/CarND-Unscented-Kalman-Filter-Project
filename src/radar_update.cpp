@@ -21,11 +21,11 @@ void RadarUpdate::InitialUpdate(TrackedObject* tracked_object, const Measurement
 {
   const RadarMeasurement& measurement = dynamic_cast<const RadarMeasurement&>(meas_mackage);
 
-  tracked_object->P_ << 1, 0, 0, 0, 0,
-                        0, 1, 0, 0, 0,
-                        0, 0, 1, 0, 0,
-                        0, 0, 0, 1, 0,
-                        0, 0, 0, 0, 1;
+  tracked_object->P_ << 15, 0, 0, 0, 0,
+                        0, 15, 0, 0, 0,
+                        0, 0, 15, 0, 0,
+                        0, 0, 0, 10, 0,
+                        0, 0, 0, 0, 5;
 
   auto rho = measurement.GetRho();
   auto theta = measurement.GetTheta();

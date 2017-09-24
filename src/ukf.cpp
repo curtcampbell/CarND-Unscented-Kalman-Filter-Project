@@ -20,9 +20,9 @@ UKF::UKF() :
   // if this is false, radar measurements will be ignored (except during init)
   use_radar_(true),
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_(0.015),
+  std_a_(0.05),
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_(0.3)
+  std_yawdd_(0.062)
 {
 
   /**
