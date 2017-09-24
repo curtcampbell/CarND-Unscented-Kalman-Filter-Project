@@ -25,14 +25,6 @@ UKF::UKF() :
   std_yawdd_(0.062)
 {
 
-  /**
-  TODO:
-
-  Complete the initialization. See ukf.h for other member properties.
-
-  Hint: one or more values initialized above might be wildly off...
-  */
-
   double lambda = 3 - aug_state_dimension;
 
   // Laser measurement noise standard deviation position1 in m

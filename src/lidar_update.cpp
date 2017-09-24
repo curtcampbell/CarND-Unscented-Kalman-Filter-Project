@@ -27,10 +27,6 @@ void LaserUpdate::InitialUpdate(TrackedObject* tracked_object, const Measurement
 */
 void LaserUpdate::Update(TrackedObject* tracked_object, const MeasurementPackage& meas_package)
 {
-  /**
-  TODO:
-  You'll also need to calculate the lidar NIS.
-  */
   const LidarMeasurement& measurement = dynamic_cast<const LidarMeasurement&>(meas_package);
 
   TLidarSigmaPointMatrix Zsig;

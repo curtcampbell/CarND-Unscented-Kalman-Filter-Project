@@ -42,15 +42,6 @@ void RadarUpdate::InitialUpdate(TrackedObject* tracked_object, const Measurement
 */
 void RadarUpdate::Update(TrackedObject* tracked_object, const MeasurementPackage& meas_package)
 {
-  /**
-  TODO:
-
-  Complete this function! Use radar data to update the belief about the object's
-  position. Modify the state vector, x_, and covariance, P_.
-
-  You'll also need to calculate the radar NIS.
-  */
-
   const RadarMeasurement& measurement = dynamic_cast<const RadarMeasurement&>(meas_package);
 
   TRadarSigmaPointMatrix Zsig;
